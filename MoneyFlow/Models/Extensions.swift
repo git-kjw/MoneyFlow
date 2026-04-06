@@ -81,6 +81,48 @@ extension Int {
     }
 }
 
+// MARK: - Double Extensions (Chart Formatting)
+extension Double {
+    var chartFormatted: String {
+        let absValue = abs(self)
+        
+        if absValue >= 100000000 { // 1억 이상
+            let value = absValue / 100000000
+            if value >= 10 {
+                return String(format: "%.0f억", value)
+            } else {
+                return String(format: "%.1f억", value)
+            }
+        } else if absValue >= 10000 { // 1만 이상
+            let value = absValue / 10000
+            if value >= 1000 { // 1000만 이상
+                return String(format: "%.0f만", value)
+            } else if value >= 100 { // 100만 이상
+                return String(format: "%.0f만", value)
+            } else if value >= 10 { // 10만 이상
+                return String(format: "%.0f만", value)
+            } else {
+                return String(format: "%.1f만", value)
+            }
+        } else if absValue >= 1000 { // 1천 이상
+            return String(format: "%.0f천", absValue / 1000)
+        } else {
+            return String(format: "%.0f", absValue)
+        }
+    }
+    
+    var formatted: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "ko_KR")
+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+    }
+    
+    var currencyFormatted: String {
+        "\(formatted)원"
+    }
+}
+
 // MARK: - Array Extensions
 extension Array where Element == Transaction {
     func filtered(by options: FilterOptions, accounts: [Account]) -> [Transaction] {

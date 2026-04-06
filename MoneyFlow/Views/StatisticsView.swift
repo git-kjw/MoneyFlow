@@ -179,6 +179,18 @@ struct StatisticsView: View {
                     .opacity(0.8)
                 }
             }
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisValueLabel {
+                        if let doubleValue = value.as(Double.self) {
+                            Text(doubleValue.chartFormatted)
+                                .font(.caption)
+                        }
+                    }
+                    AxisGridLine()
+                    AxisTick()
+                }
+            }
             .frame(height: 200)
             .padding(.horizontal)
         }
