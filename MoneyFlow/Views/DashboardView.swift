@@ -36,6 +36,9 @@ struct DashboardView: View {
                     }
                     .padding()
                 }
+                .refreshable {
+                    await dataManager.refreshData()
+                }
             }
             .navigationTitle("대시보드")
             .background(Color.systemBackground)

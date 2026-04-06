@@ -337,4 +337,23 @@ class DataManager: ObservableObject {
         saveToFile(url: url)
         print("✅ 기본 iCloud 파일 생성: \(url.path)")
     }
+    
+    // MARK: - Pull-to-Refresh
+    func refreshData() async {
+        guard let url = currentFileURL else { return }
+        
+        // 메인 스레드에서 isLoading 상태 업데이트
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+        
+        // 약간의 지연으로 사용자에게 새로고침 중임을 보여줌
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5초
+        
+        // 파일에서 최신 데이터 로드
+        await MainActor.run {
+            loadFromFile(url: url)
+        }
+    }
 }

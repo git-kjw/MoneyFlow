@@ -49,6 +49,9 @@ struct StatisticsView: View {
                         accountStatisticsView
                     }
                 }
+                .refreshable {
+                    await dataManager.refreshData()
+                }
             }
             .navigationTitle("통계")
         }

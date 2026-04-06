@@ -115,6 +115,9 @@ struct TransactionListView: View {
                 }
             }
         }
+        .refreshable {
+            await dataManager.refreshData()
+        }
         #if os(iOS)
         .listStyle(.insetGrouped)
         #endif
