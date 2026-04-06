@@ -468,6 +468,24 @@ struct AccountYearlyStatCard: View {
                         .foregroundStyle(Color.withdrawalColor)
                 }
                 
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "equal")
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                        Text("순증감")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    let yearWithdrawal = dataManager.appData.transactions
+                        .filter { $0.accountId == statistics.account.id && $0.type == .withdrawal && $0.date.year == year }
+                        .reduce(0) { $0 + $1.amount }
+                    let netChange = statistics.yearlyDeposit - yearWithdrawal
+                    Text(netChange.currencyFormatted)
+                        .font(.headline)
+                        .foregroundStyle(netChange >= 0 ? Color.depositColor : Color.withdrawalColor)
+                }
+                
                 Spacer()
             }
             
@@ -577,6 +595,21 @@ struct AccountMonthlyStatCard: View {
                         Text(monthWithdrawal.currencyFormatted)
                             .font(.headline)
                             .foregroundStyle(Color.withdrawalColor)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "equal")
+                                .font(.caption)
+                                .foregroundStyle(.primary)
+                            Text("순증감")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        let netChange = monthDeposit - monthWithdrawal
+                        Text(netChange.currencyFormatted)
+                            .font(.headline)
+                            .foregroundStyle(netChange >= 0 ? Color.depositColor : Color.withdrawalColor)
                     }
                     
                     Spacer()
