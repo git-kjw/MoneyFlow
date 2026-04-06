@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct StatisticsView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -9,6 +10,7 @@ struct StatisticsView: View {
     enum ViewType: String, CaseIterable {
         case yearly = "연간"
         case monthly = "월간"
+        case goals = "목표"
         case byAccount = "계좌별"
     }
     
@@ -41,6 +43,8 @@ struct StatisticsView: View {
                         yearlyStatisticsView
                     case .monthly:
                         monthlyStatisticsView
+                    case .goals:
+                        goalsView
                     case .byAccount:
                         accountStatisticsView
                     }
@@ -58,7 +62,7 @@ struct StatisticsView: View {
                     Button {
                         selectedYear = year
                     } label: {
-                        Text("\(year)년")
+                        Text("\(year)")
                             .font(.subheadline)
                             .fontWeight(selectedYear == year ? .bold : .regular)
                             .padding(.horizontal, 16)
@@ -79,46 +83,109 @@ struct StatisticsView: View {
     // MARK: - Yearly Statistics
     private var yearlyStatisticsView: some View {
         VStack(spacing: 16) {
-            // 연간 총계
-            let summary = dataManager.yearlySummary(year: selectedYear)
+            // 연간 총계 요약
+            yearlyOverviewCards
             
-            VStack(spacing: 16) {
-                HStack {
-                    StatCard(title: "총 입금", value: summary.deposit, color: .green)
-                    StatCard(title: "총 출금", value: summary.withdrawal, color: .red)
-                }
-                
-                StatCard(
-                    title: "순 이체액",
-                    value: summary.deposit - summary.withdrawal,
-                    color: summary.deposit >= summary.withdrawal ? .green : .red,
-                    isLarge: true
-                )
-            }
-            .padding(.horizontal)
+            // 월별 추이 차트
+            monthlyTrendChart
             
-            // 월별 차트
+            // 계좌별 연간 통계
+            let statistics = dataManager.getAllStatistics(year: selectedYear)
+            
             VStack(alignment: .leading, spacing: 12) {
-                Text("월별 추이")
+                Text("계좌별 현황")
                     .font(.headline)
                     .padding(.horizontal)
                 
-                ForEach(1...12, id: \.self) { month in
-                    let monthSummary = dataManager.monthlySummary(year: selectedYear, month: month)
-                    MonthlyBarRow(
-                        month: month,
-                        deposit: monthSummary.deposit,
-                        withdrawal: monthSummary.withdrawal,
-                        maxValue: getMaxMonthlyValue()
-                    )
+                ForEach(statistics, id: \.account.id) { stat in
+                    AccountYearlyStatCard(statistics: stat, year: selectedYear)
+                        .padding(.horizontal)
                 }
             }
-            .padding()
-            .background(Color.secondarySystemBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal)
         }
         .padding(.vertical)
+    }
+    
+    private var yearlyOverviewCards: some View {
+        let summary = dataManager.yearlySummary(year: selectedYear)
+        let netAmount = summary.deposit - summary.withdrawal
+        
+        return HStack(spacing: 12) {
+            VStack(spacing: 8) {
+                Text("총 입금")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(summary.deposit.currencyFormatted)
+                    .font(.headline)
+                    .foregroundStyle(Color.depositColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.depositColor.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            
+            VStack(spacing: 8) {
+                Text("총 출금")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(summary.withdrawal.currencyFormatted)
+                    .font(.headline)
+                    .foregroundStyle(Color.withdrawalColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.withdrawalColor.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            
+            VStack(spacing: 8) {
+                Text("순증감")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(netAmount.currencyFormatted)
+                    .font(.headline)
+                    .foregroundStyle(netAmount >= 0 ? Color.depositColor : Color.withdrawalColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background((netAmount >= 0 ? Color.depositColor : Color.withdrawalColor).opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .padding(.horizontal)
+    }
+    
+    @available(iOS 16.0, macOS 13.0, *)
+    private var monthlyTrendChart: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("월별 추이")
+                .font(.headline)
+                .padding(.horizontal)
+            
+            Chart {
+                ForEach(1...12, id: \.self) { month in
+                    let summary = dataManager.monthlySummary(year: selectedYear, month: month)
+                    
+                    BarMark(
+                        x: .value("월", "\(month)월"),
+                        y: .value("입금", summary.deposit)
+                    )
+                    .foregroundStyle(Color.depositColor)
+                    .opacity(0.8)
+                    
+                    BarMark(
+                        x: .value("월", "\(month)월"),
+                        y: .value("출금", -summary.withdrawal)
+                    )
+                    .foregroundStyle(Color.withdrawalColor)
+                    .opacity(0.8)
+                }
+            }
+            .frame(height: 200)
+            .padding(.horizontal)
+        }
+        .padding()
+        .background(Color.secondarySystemBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal)
     }
     
     // MARK: - Monthly Statistics
@@ -145,60 +212,21 @@ struct StatisticsView: View {
                 .padding(.horizontal)
             }
             
-            // 월간 총계
-            let summary = dataManager.monthlySummary(year: selectedYear, month: selectedMonth)
+            // 월간 총계 요약
+            monthlyOverviewCards
             
-            VStack(spacing: 16) {
-                HStack {
-                    StatCard(title: "입금", value: summary.deposit, color: .green)
-                    StatCard(title: "출금", value: summary.withdrawal, color: .red)
-                }
+            // 계좌별 월간 통계
+            let activeAccounts = dataManager.appData.accounts.filter { $0.isActive }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                Text("계좌별 현황")
+                    .font(.headline)
+                    .padding(.horizontal)
                 
-                StatCard(
-                    title: "순 이체액",
-                    value: summary.deposit - summary.withdrawal,
-                    color: summary.deposit >= summary.withdrawal ? .green : .red,
-                    isLarge: true
-                )
-            }
-            .padding(.horizontal)
-            
-            // 해당 월 거래 목록
-            let monthTransactions = dataManager.appData.transactions.filter {
-                $0.date.year == selectedYear && $0.date.month == selectedMonth
-            }.sorted { $0.date > $1.date }
-            
-            if !monthTransactions.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("거래 내역")
-                        .font(.headline)
-                    
-                    ForEach(monthTransactions) { transaction in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(dataManager.getAccount(by: transaction.accountId)?.displayName ?? "삭제된 계좌")
-                                    .font(.subheadline)
-                                Text(transaction.date.shortDateString)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Text("\(transaction.type.symbol)\(transaction.amount.currencyFormatted)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(transaction.type == .deposit ? .green : .red)
-                        }
-                        .padding(.vertical, 4)
-                        
-                        if transaction.id != monthTransactions.last?.id {
-                            Divider()
-                        }
-                    }
+                ForEach(activeAccounts) { account in
+                    AccountMonthlyStatCard(account: account, year: selectedYear, month: selectedMonth)
+                        .padding(.horizontal)
                 }
-                .padding()
-                .background(Color.secondarySystemBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
             }
         }
         .padding(.vertical)
@@ -310,7 +338,7 @@ struct AccountStatCard: View {
                 
                 if let limit = statistics.account.yearlyLimit {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("한도")
+                        Text("목표")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                         Text(limit.currencyFormatted)
@@ -347,7 +375,7 @@ struct AccountStatCard: View {
                 }
             }
             
-            // 한도가 있는 경우 프로그레스 바
+            // 목표가 있는 경우 프로그레스 바
             if let limit = statistics.account.yearlyLimit, limit > 0 {
                 let progress = Double(statistics.yearlyDeposit) / Double(limit)
                 
@@ -356,9 +384,9 @@ struct AccountStatCard: View {
                         .tint(progress <= 1.0 ? .green : .red)
                     
                     HStack {
-                        Text("\(Int(progress * 100))% 사용")
+                        Text("\(Int(progress * 100))% 달성")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(progress <= 1.0 ? .green : .orange)
                         Spacer()
                     }
                 }
@@ -367,6 +395,267 @@ struct AccountStatCard: View {
         .padding()
         .background(Color.secondarySystemBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Account Yearly Stat Card
+struct AccountYearlyStatCard: View {
+    @EnvironmentObject var dataManager: DataManager
+    let statistics: AccountStatistics
+    let year: Int
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Circle()
+                    .fill(Color.accountColor(for: statistics.account))
+                    .frame(width: 14, height: 14)
+                
+                Text(statistics.account.name)
+                    .font(.headline)
+                
+                Spacer()
+                
+                Text(statistics.account.broker)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Divider()
+            
+            HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down")
+                            .font(.caption)
+                            .foregroundStyle(Color.depositColor)
+                        Text("입금")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(statistics.yearlyDeposit.currencyFormatted)
+                        .font(.headline)
+                        .foregroundStyle(Color.depositColor)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up")
+                            .font(.caption)
+                            .foregroundStyle(Color.withdrawalColor)
+                        Text("출금")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    // 연간 출금 계산
+                    let yearWithdrawal = dataManager.appData.transactions
+                        .filter { $0.accountId == statistics.account.id && $0.type == .withdrawal && $0.date.year == year }
+                        .reduce(0) { $0 + $1.amount }
+                    Text(yearWithdrawal.currencyFormatted)
+                        .font(.headline)
+                        .foregroundStyle(Color.withdrawalColor)
+                }
+                
+                Spacer()
+            }
+            
+            // 목표가 있는 경우
+            if let limit = statistics.account.yearlyLimit {
+                Divider()
+                
+                let progress = Double(statistics.yearlyDeposit) / Double(limit)
+                
+                VStack(spacing: 8) {
+                    ProgressView(value: min(progress, 1.0))
+                        .tint(progress <= 1.0 ? Color.accountColor(for: statistics.account) : .red)
+                        .frame(height: 8)
+                    
+                    HStack {
+                        Text("목표 \(limit.currencyFormatted)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        if (statistics.remainingLimit ?? 0) > 0 {
+                            Text("목표까지 \((statistics.remainingLimit ?? 0).currencyFormatted)")
+                                .font(.caption2)
+                                .foregroundStyle(Color.accountColor(for: statistics.account))
+                                .fontWeight(.medium)
+                        } else {
+                            Text("목표 달성!")
+                                .font(.caption2)
+                                .foregroundStyle(.green)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.secondarySystemBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Account Monthly Stat Card
+struct AccountMonthlyStatCard: View {
+    @EnvironmentObject var dataManager: DataManager
+    let account: Account
+    let year: Int
+    let month: Int
+    
+    private var monthDeposit: Int {
+        dataManager.appData.transactions
+            .filter { $0.accountId == account.id && $0.type == .deposit && $0.date.year == year && $0.date.month == month }
+            .reduce(0) { $0 + $1.amount }
+    }
+    
+    private var monthWithdrawal: Int {
+        dataManager.appData.transactions
+            .filter { $0.accountId == account.id && $0.type == .withdrawal && $0.date.year == year && $0.date.month == month }
+            .reduce(0) { $0 + $1.amount }
+    }
+    
+    var body: some View {
+        // 거래가 없으면 표시하지 않음
+        if monthDeposit == 0 && monthWithdrawal == 0 {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Circle()
+                        .fill(Color.accountColor(for: account))
+                        .frame(width: 14, height: 14)
+                    
+                    Text(account.name)
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    Text(account.broker)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Divider()
+                
+                HStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.down")
+                                .font(.caption)
+                                .foregroundStyle(Color.depositColor)
+                            Text("입금")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(monthDeposit.currencyFormatted)
+                            .font(.headline)
+                            .foregroundStyle(Color.depositColor)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up")
+                                .font(.caption)
+                                .foregroundStyle(Color.withdrawalColor)
+                            Text("출금")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(monthWithdrawal.currencyFormatted)
+                            .font(.headline)
+                            .foregroundStyle(Color.withdrawalColor)
+                    }
+                    
+                    Spacer()
+                }
+            }
+            .padding()
+            .background(Color.secondarySystemBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+extension StatisticsView {
+    // MARK: - Monthly Overview Cards  
+    private var monthlyOverviewCards: some View {
+        let summary = dataManager.monthlySummary(year: selectedYear, month: selectedMonth)
+        let netAmount = summary.deposit - summary.withdrawal
+        
+        return HStack(spacing: 12) {
+            VStack(spacing: 8) {
+                Text("총 입금")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(summary.deposit.currencyFormatted)
+                    .font(.headline)
+                    .foregroundStyle(Color.depositColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.depositColor.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            
+            VStack(spacing: 8) {
+                Text("총 출금")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(summary.withdrawal.currencyFormatted)
+                    .font(.headline)
+                    .foregroundStyle(Color.withdrawalColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.withdrawalColor.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            
+            VStack(spacing: 8) {
+                Text("순증감")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(netAmount.currencyFormatted)
+                    .font(.headline)
+                    .foregroundStyle(netAmount >= 0 ? Color.depositColor : Color.withdrawalColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background((netAmount >= 0 ? Color.depositColor : Color.withdrawalColor).opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .padding(.horizontal)
+    }
+    
+    // MARK: - Goals View
+    private var goalsView: some View {
+        VStack(spacing: 16) {
+            // 임시 placeholder - 추후 완전한 목표 관리 기능 구현 예정
+            VStack(spacing: 12) {
+                Image(systemName: "target")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.secondary)
+                
+                Text("목표 관리")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                
+                Text("연간 목표 달성률과 저축 목표를\n관리할 수 있습니다")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                
+                Button("추후 구현 예정") {
+                    // TODO: 목표 관리 기능 구현
+                }
+                .buttonStyle(.bordered)
+                .disabled(true)
+            }
+            .padding(40)
+            .frame(maxWidth: .infinity)
+            .background(Color.secondarySystemBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
     }
 }
 

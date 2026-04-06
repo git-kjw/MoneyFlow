@@ -10,6 +10,7 @@ struct AccountEditView: View {
     @State private var broker: String = ""
     @State private var hasYearlyLimit: Bool = false
     @State private var yearlyLimit: String = ""
+    @State private var selectedColor: AccountColor = .blue
     @State private var isActive: Bool = true
     
     init(editAccount: Account? = nil) {
@@ -61,11 +62,11 @@ struct AccountEditView: View {
                 
                 // 납입 한도
                 Section {
-                    Toggle("연간 납입 한도 설정", isOn: $hasYearlyLimit)
+                    Toggle("연간 목표 설정", isOn: $hasYearlyLimit)
                     
                     if hasYearlyLimit {
                         HStack {
-                            TextField("한도 금액", text: $yearlyLimit)
+                            TextField("목표 금액", text: $yearlyLimit)
                                 #if os(iOS)
                                 .keyboardType(.numberPad)
                                 #endif
@@ -73,7 +74,7 @@ struct AccountEditView: View {
                                 .foregroundStyle(.secondary)
                         }
                         
-                        // 자주 사용하는 한도
+                        // 자주 사용하는 목표액
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach([9000000, 18000000, 20000000, 40000000], id: \.self) { limit in
@@ -100,6 +101,33 @@ struct AccountEditView: View {
                     Text("납입 한도")
                 } footer: {
                     Text("연금저축, IRP, ISA 등 납입 한도가 있는 계좌에 설정하세요.")
+                }
+                
+                // 색상 선택
+                Section("계좌 색상") {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 12) {
+                        ForEach(AccountColor.allCases, id: \.self) { color in
+                            Button {
+                                selectedColor = color
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Circle()
+                                        .fill(color.color)
+                                        .frame(width: 40, height: 40)
+                                        .overlay(
+                                            Circle()
+                                                .strokeBorder(Color.primary, lineWidth: selectedColor == color ? 3 : 0)
+                                        )
+                                    
+                                    Text(color.displayName)
+                                        .font(.caption2)
+                                        .foregroundStyle(selectedColor == color ? .primary : .secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 8)
                 }
                 
                 // 활성 상태
@@ -151,7 +179,12 @@ struct AccountEditView: View {
                     broker = account.broker
                     hasYearlyLimit = account.yearlyLimit != nil
                     yearlyLimit = account.yearlyLimit.map { "\($0)" } ?? ""
+                    selectedColor = account.color
                     isActive = account.isActive
+                } else {
+                    // 새 계좌 추가 시 사용되지 않은 색상 자동 선택
+                    let usedColors = dataManager.appData.accounts.map { $0.colorName }
+                    selectedColor = AccountColor.nextAvailableColor(usedColors: usedColors)
                 }
             }
         }
@@ -171,6 +204,7 @@ struct AccountEditView: View {
             updated.name = trimmedName
             updated.broker = trimmedBroker
             updated.yearlyLimit = limit
+            updated.colorName = selectedColor.rawValue
             updated.isActive = isActive
             dataManager.updateAccount(updated)
         } else {
@@ -178,6 +212,7 @@ struct AccountEditView: View {
                 name: trimmedName,
                 broker: trimmedBroker,
                 yearlyLimit: limit,
+                colorName: selectedColor.rawValue,
                 isActive: isActive
             )
             dataManager.addAccount(account)

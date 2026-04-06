@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E51234560021 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550021 /* DashboardView.swift */; };
+		E51234560020 /* QuickEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550020 /* QuickEntryView.swift */; };
 		E51234560001 /* MoneyFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550001 /* MoneyFlowApp.swift */; };
 		E51234560002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550002 /* ContentView.swift */; };
 		E51234560003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E51234550003 /* Assets.xcassets */; };
@@ -22,6 +24,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		E51234550021 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		E51234550020 /* QuickEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickEntryView.swift; sourceTree = "<group>"; };
 		E51234550000 /* MoneyFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoneyFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E51234550001 /* MoneyFlowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyFlowApp.swift; sourceTree = "<group>"; };
 		E51234550002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -98,6 +102,8 @@
 				E51234550007 /* TransactionListView.swift */,
 				E51234550008 /* StatisticsView.swift */,
 				E51234550009 /* AddTransactionView.swift */,
+				E51234550020 /* QuickEntryView.swift */,
+				E51234550021 /* DashboardView.swift */,
 				E51234550010 /* AccountEditView.swift */,
 			);
 			path = Views;
@@ -189,6 +195,8 @@
 				E51234560007 /* TransactionListView.swift in Sources */,
 				E51234560008 /* StatisticsView.swift in Sources */,
 				E51234560009 /* AddTransactionView.swift in Sources */,
+				E51234560020 /* QuickEntryView.swift in Sources */,
+				E51234560021 /* DashboardView.swift in Sources */,
 				E51234560010 /* AccountEditView.swift in Sources */,
 				E51234560011 /* Extensions.swift in Sources */,
 				E51234560012 /* ColorExtensions.swift in Sources */,

@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var showingSetupSheet = false
     
     enum Tab: String, CaseIterable {
+        case dashboard = "대시보드"
         case transactions = "거래내역"
         case accounts = "계좌관리"
         case statistics = "통계"
@@ -17,6 +18,12 @@ struct ContentView: View {
     var body: some View {
         #if os(iOS)
         TabView(selection: $selectedTab) {
+            DashboardView()
+                .tabItem {
+                    Label("대시보드", systemImage: "chart.pie")
+                }
+                .tag(Tab.dashboard)
+            
             TransactionListView()
                 .tabItem {
                     Label("거래내역", systemImage: "list.bullet.rectangle")
@@ -90,6 +97,8 @@ struct ContentView: View {
             .buttonStyle(.plain)
         } detail: {
             switch selectedTab {
+            case .dashboard:
+                DashboardView()
             case .transactions:
                 TransactionListView()
             case .accounts:
@@ -115,6 +124,7 @@ struct ContentView: View {
     
     private func iconFor(tab: Tab) -> String {
         switch tab {
+        case .dashboard: return "chart.pie"
         case .transactions: return "list.bullet.rectangle"
         case .accounts: return "banknote"
         case .statistics: return "chart.bar"

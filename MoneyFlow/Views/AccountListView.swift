@@ -143,7 +143,11 @@ struct AccountRow: View {
     let account: Account
     
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color.accountColor(for: account))
+                .frame(width: 14, height: 14)
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(account.name)
                     .font(.headline)
@@ -156,15 +160,15 @@ struct AccountRow: View {
             
             let stats = dataManager.getStatistics(for: account)
             VStack(alignment: .trailing, spacing: 4) {
-                Text("총 입금")
-                    .font(.caption)
+                Text(stats.netAmount.currencyFormatted)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(Color.accountColor(for: account))
+                Text("순입금")
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text(stats.totalDeposit.currencyFormatted)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
     }
 }
 
@@ -178,8 +182,12 @@ struct AccountLimitRow: View {
         let limit = account.yearlyLimit ?? 0
         let progress = limit > 0 ? Double(stats.yearlyDeposit) / Double(limit) : 0
         
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
+                Circle()
+                    .fill(Color.accountColor(for: account))
+                    .frame(width: 14, height: 14)
+                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(account.name)
                         .font(.headline)
@@ -191,33 +199,39 @@ struct AccountLimitRow: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("남은 한도")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                     Text((stats.remainingLimit ?? 0).currencyFormatted)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundStyle((stats.remainingLimit ?? 0) > 0 ? .green : .red)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle((stats.remainingLimit ?? 0) > 0 ? Color.accountColor(for: account) : .red)
+                    Text("남은 한도")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
             
             // 프로그레스 바
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 ProgressView(value: min(progress, 1.0))
-                    .tint(progress <= 1.0 ? .green : .red)
+                    .tint(progress <= 1.0 ? Color.accountColor(for: account) : .red)
+                    .frame(height: 8)
                 
                 HStack {
-                    Text("\(stats.yearlyDeposit.formatted)원")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(Color.depositColor)
+                        Text("\(stats.yearlyDeposit.formatted)원")
+                            .font(.caption)
+                    }
+                    
                     Spacer()
+                    
                     Text("\(limit.formatted)원")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
     }
 }
 

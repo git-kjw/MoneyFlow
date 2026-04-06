@@ -3,6 +3,7 @@ import SwiftUI
 struct TransactionListView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingAddSheet = false
+    @State private var showingQuickEntry = false
     @State private var showingFilterSheet = false
     @State private var filterOptions = FilterOptions()
     @State private var selectedTransaction: Transaction?
@@ -34,9 +35,6 @@ struct TransactionListView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 요약 카드
-                summaryCard
-                
                 // 거래 목록
                 if groupedTransactions.isEmpty {
                     emptyStateView
@@ -49,7 +47,7 @@ struct TransactionListView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        showingAddSheet = true
+                        showingQuickEntry = true
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -66,6 +64,9 @@ struct TransactionListView: View {
             .sheet(isPresented: $showingAddSheet) {
                 AddTransactionView()
             }
+            .sheet(isPresented: $showingQuickEntry) {
+                QuickEntryView()
+            }
             .sheet(isPresented: $showingFilterSheet) {
                 FilterView(options: $filterOptions)
             }
@@ -73,53 +74,6 @@ struct TransactionListView: View {
                 AddTransactionView(editTransaction: transaction)
             }
         }
-    }
-    
-    // MARK: - Summary Card
-    private var summaryCard: some View {
-        let totalDeposit = filteredTransactions.filter { $0.type == .deposit }.reduce(0) { $0 + $1.amount }
-        let totalWithdrawal = filteredTransactions.filter { $0.type == .withdrawal }.reduce(0) { $0 + $1.amount }
-        
-        return VStack(spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("입금")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("+\(totalDeposit.currencyFormatted)")
-                        .font(.headline)
-                        .foregroundStyle(.green)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("출금")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("-\(totalWithdrawal.currencyFormatted)")
-                        .font(.headline)
-                        .foregroundStyle(.red)
-                }
-            }
-            
-            Divider()
-            
-            HStack {
-                Text("순이체")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\((totalDeposit - totalWithdrawal).currencyFormatted)")
-                    .font(.headline)
-                    .foregroundStyle(totalDeposit >= totalWithdrawal ? .green : .red)
-            }
-        }
-        .padding()
-        .background(Color.systemBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        .padding()
     }
     
     // MARK: - Transaction List
@@ -142,9 +96,22 @@ struct TransactionListView: View {
                             }
                     }
                 } header: {
-                    Text(group.date.dateString)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                    HStack {
+                        Text(group.date.dateString)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        // 일자별 합계
+                        let dayTotal = group.transactions.reduce(0) { sum, tx in
+                            sum + (tx.type == .deposit ? tx.amount : -tx.amount)
+                        }
+                        Text(dayTotal >= 0 ? "+\(dayTotal.currencyFormatted)" : "\(dayTotal.currencyFormatted)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(dayTotal >= 0 ? Color.depositColor : Color.withdrawalColor)
+                    }
                 }
             }
         }
@@ -185,11 +152,22 @@ struct TransactionRow: View {
     }
     
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            // 계좌 색상 인디케이터
+            Rectangle()
+                .fill(account.map { Color.accountColor(for: $0) } ?? .gray)
+                .frame(width: 4)
+                .clipShape(RoundedRectangle(cornerRadius: 2))
+            
+            // 거래 아이콘
+            Image(systemName: transaction.type == .deposit ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+                .font(.system(size: 24))
+                .foregroundStyle(transaction.type == .deposit ? Color.depositColor : Color.withdrawalColor)
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(account?.displayName ?? "삭제된 계좌")
                     .font(.subheadline)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
                 
                 if let memo = transaction.memo, !memo.isEmpty {
                     Text(memo)
@@ -202,11 +180,61 @@ struct TransactionRow: View {
             Spacer()
             
             Text("\(transaction.type.symbol)\(transaction.amount.currencyFormatted)")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(transaction.type == .deposit ? .green : .red)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(transaction.type == .deposit ? Color.depositColor : Color.withdrawalColor)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Account Mini Card
+struct AccountMiniCard: View {
+    @EnvironmentObject var dataManager: DataManager
+    let account: Account
+    
+    private var stats: AccountStatistics {
+        dataManager.getStatistics(for: account)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Circle()
+                    .fill(Color.accountColor(for: account))
+                    .frame(width: 10, height: 10)
+                
+                Text(account.name)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                
+                Spacer()
+            }
+            
+            Text(stats.netAmount.currencyFormatted)
+                .font(.system(size: 20, weight: .bold))
+                .lineLimit(1)
+            
+            if let limit = account.yearlyLimit {
+                let progress = Double(stats.yearlyDeposit) / Double(limit)
+                VStack(alignment: .leading, spacing: 4) {
+                    ProgressView(value: min(progress, 1.0))
+                        .tint(progress <= 1.0 ? Color.accountColor(for: account) : .red)
+                        .frame(height: 4)
+                    
+                    Text("남은 한도: \((stats.remainingLimit ?? 0).currencyFormatted)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text(account.broker)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .frame(width: 160)
+        .background(Color.secondarySystemBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
