@@ -267,7 +267,7 @@ extension DashboardView {
                                     selectedYear = year
                                 }
                             } label: {
-                                Text("\(year)")
+                                Text(String(year))
                                     .font(.subheadline)
                                     .fontWeight(selectedYear == year ? .bold : .regular)
                                     .padding(.horizontal, 16)

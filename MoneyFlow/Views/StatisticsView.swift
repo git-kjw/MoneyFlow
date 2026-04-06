@@ -62,7 +62,7 @@ struct StatisticsView: View {
                     Button {
                         selectedYear = year
                     } label: {
-                        Text("\(year)")
+                        Text(String(year))
                             .font(.subheadline)
                             .fontWeight(selectedYear == year ? .bold : .regular)
                             .padding(.horizontal, 16)
@@ -351,7 +351,7 @@ struct AccountStatCard: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(year)년 입금")
+                    Text("\(String(year))년 입금")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(statistics.yearlyDeposit.currencyFormatted)
