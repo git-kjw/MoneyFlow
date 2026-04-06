@@ -16,6 +16,11 @@ class DataManager: ObservableObject {
     init() {
         self.appData = AppData.defaultData
         loadFromUserDefaults()
+        
+        // 앱 시작 시 자동으로 기본 파일 설정
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.setupDefaultFile()
+        }
     }
     
     deinit {
@@ -293,5 +298,43 @@ class DataManager: ObservableObject {
         let withdrawal = transactions.filter { $0.type == .withdrawal }.reduce(0) { $0 + $1.amount }
         
         return (deposit, withdrawal)
+    }
+    
+    // MARK: - Auto File Setup
+    private func setupDefaultFile() {
+        // 이미 파일이 열려있거나 bookmark에서 로드 성공하면 건너뛰기
+        if currentFileURL != nil || loadFromBookmark() {
+            return
+        }
+        
+        // iCloud Drive의 기본 위치에 MoneyFlow 데이터 파일 생성/사용
+        if let iCloudURL = getDefaultiCloudFileURL() {
+            if FileManager.default.fileExists(atPath: iCloudURL.path) {
+                // 기존 파일이 있으면 로드
+                loadFromFile(url: iCloudURL)
+            } else {
+                // 없으면 새로 생성
+                createDefaultiCloudFile(at: iCloudURL)
+            }
+        }
+    }
+    
+    private func getDefaultiCloudFileURL() -> URL? {
+        guard let iCloudURL = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
+            return nil
+        }
+        
+        let documentsURL = iCloudURL.appendingPathComponent("Documents")
+        
+        // Documents 폴더가 없으면 생성
+        try? FileManager.default.createDirectory(at: documentsURL, withIntermediateDirectories: true)
+        
+        return documentsURL.appendingPathComponent("MoneyFlowData.json")
+    }
+    
+    private func createDefaultiCloudFile(at url: URL) {
+        // 현재 데이터를 기본 파일로 저장
+        saveToFile(url: url)
+        print("✅ 기본 iCloud 파일 생성: \(url.path)")
     }
 }
