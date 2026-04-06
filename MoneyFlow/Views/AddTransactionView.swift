@@ -20,10 +20,6 @@ struct AddTransactionView: View {
         editTransaction != nil
     }
     
-    private var isValid: Bool {
-        selectedAccountId != nil && (Int(amount) ?? 0) > 0
-    }
-    
     var body: some View {
         NavigationStack {
             Form {
@@ -82,32 +78,78 @@ struct AddTransactionView: View {
                 
                 // 금액
                 Section("금액") {
-                    HStack {
-                        TextField("금액 입력", text: $amount)
-                            #if os(iOS)
-                            .keyboardType(.numberPad)
-                            .textFieldStyle(.roundedBorder)
-                            #endif
-                        Text("원")
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    // 빠른 금액 버튼
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach([100000, 500000, 1000000, 5000000, 10000000], id: \.self) { value in
-                                Button {
-                                    amount = "\(value)"
-                                } label: {
-                                    Text("+\(value.formatted)")
-                                        .font(.caption)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.accentColor.opacity(0.1))
-                                        .clipShape(Capsule())
+                    VStack(alignment: .leading, spacing: 12) {
+                        // 메인 금액 입력
+                        HStack {
+                            TextField("0", text: $amount)
+                                #if os(iOS)
+                                .keyboardType(.numberPad)
+                                .textFieldStyle(.roundedBorder)
+                                #endif
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .onChange(of: amount) { oldValue, newValue in
+                                    formatAmountInput(newValue)
                                 }
-                                .buttonStyle(.plain)
+                            Text("원")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        // 실제 숫자 표시
+                        if let numericAmount = extractNumericValue(from: amount), numericAmount > 0 {
+                            Text(numericAmount.currencyFormatted)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        // 빠른 금액 버튼 - 일반적인 금액들
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("빠른 입력")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+                                ForEach(quickAmountButtons, id: \.amount) { button in
+                                    Button {
+                                        setAmount(button.amount)
+                                    } label: {
+                                        VStack(spacing: 2) {
+                                            Text(button.title)
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                            Text(button.amount.formatted + "원")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 8)
+                                        .background(Color.accentColor.opacity(0.1))
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
+                        }
+                        
+                        // 추가 금액 버튼 - 큰 금액들
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach([5000000, 10000000, 20000000, 50000000], id: \.self) { value in
+                                    Button {
+                                        setAmount(value)
+                                    } label: {
+                                        Text(value.formatted + "원")
+                                            .font(.caption)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.secondary.opacity(0.1))
+                                            .clipShape(Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 1)
                         }
                     }
                 }
@@ -175,9 +217,48 @@ struct AddTransactionView: View {
         .presentationDetents([.large])
     }
     
+    private var quickAmountButtons: [QuickAmountButton] {
+        [
+            QuickAmountButton(title: "1만원", amount: 10000),
+            QuickAmountButton(title: "5만원", amount: 50000),
+            QuickAmountButton(title: "10만원", amount: 100000),
+            QuickAmountButton(title: "50만원", amount: 500000),
+            QuickAmountButton(title: "100만원", amount: 1000000),
+            QuickAmountButton(title: "500만원", amount: 5000000)
+        ]
+    }
+    
+    private func formatAmountInput(_ input: String) {
+        // 숫자만 추출
+        let numbersOnly = input.filter { $0.isNumber }
+        
+        // 너무 긴 숫자 제한 (10자리까지)
+        let limitedNumbers = String(numbersOnly.prefix(10))
+        
+        // 포매팅된 문자열로 업데이트
+        if let number = Int(limitedNumbers), number > 0 {
+            amount = number.formatted
+        } else if limitedNumbers.isEmpty {
+            amount = ""
+        }
+    }
+    
+    private func extractNumericValue(from input: String) -> Int? {
+        let numbersOnly = input.filter { $0.isNumber }
+        return Int(numbersOnly)
+    }
+    
+    private func setAmount(_ value: Int) {
+        amount = value.formatted
+    }
+    
+    private var isValid: Bool {
+        selectedAccountId != nil && (extractNumericValue(from: amount) ?? 0) > 0
+    }
+    
     private func saveTransaction() {
         guard let accountId = selectedAccountId,
-              let amountValue = Int(amount),
+              let amountValue = extractNumericValue(from: amount),
               amountValue > 0 else {
             return
         }
@@ -203,6 +284,12 @@ struct AddTransactionView: View {
         
         dismiss()
     }
+}
+
+// MARK: - Quick Amount Button
+struct QuickAmountButton {
+    let title: String
+    let amount: Int
 }
 
 #Preview {
