@@ -1,0 +1,48 @@
+# Xcode
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdata/
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+
+# macOS
+*.swp
+*~
+
+# Archives
+*.xcarchive
+
+# App-specific
+/Applications/MoneyFlow.app
+/tmp/
+
+# Xcode generated
+*.swiftpm
+Package.resolved
+
+# Secrets
+*.key
+*.p12
+
+# Editor directories and files
+.idea/
+.vscode/
+
+# User-specific
+.env
+.local
