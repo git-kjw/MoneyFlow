@@ -19,6 +19,14 @@ struct DashboardView: View {
             return dataManager.appData.transactions.filter { $0.date.year == selectedYear }
         }
     }
+
+    private var limitReferenceYear: Int {
+        showAllTime ? Calendar.current.component(.year, from: Date()) : selectedYear
+    }
+
+    private var limitSectionTitle: String {
+        showAllTime ? "올해 납입" : "\(selectedYear)년 납입"
+    }
     
     var body: some View {
         NavigationStack {
@@ -106,8 +114,10 @@ struct DashboardView: View {
             
             ForEach(dataManager.appData.accounts.filter { $0.isActive }) { account in
                 AccountDashboardCard(
-                    account: account, 
-                    filteredTransactions: filteredTransactions
+                    account: account,
+                    filteredTransactions: filteredTransactions,
+                    limitReferenceYear: limitReferenceYear,
+                    limitSectionTitle: limitSectionTitle
                 )
             }
         }
@@ -119,9 +129,11 @@ struct AccountDashboardCard: View {
     @EnvironmentObject var dataManager: DataManager
     let account: Account
     let filteredTransactions: [Transaction]
-    
+    let limitReferenceYear: Int
+    let limitSectionTitle: String
+
     private var stats: AccountStatistics {
-        AccountStatistics(account: account, transactions: filteredTransactions)
+        AccountStatistics(account: account, transactions: filteredTransactions, year: limitReferenceYear)
     }
     
     var body: some View {
@@ -179,7 +191,7 @@ struct AccountDashboardCard: View {
                 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("올해 납입")
+                        Text(limitSectionTitle)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
