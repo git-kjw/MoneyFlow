@@ -1,6 +1,6 @@
 # MoneyFlow - 계좌 입출금 관리 앱
 
-macOS와 iOS에서 사용 가능한 Universal 계좌 입출금 내역 관리 앱입니다.
+macOS와 iOS에서 사용 가능한 Universal 계좌 입출금 내역 관리 앱입니다
 
 ## 주요 기능
 
