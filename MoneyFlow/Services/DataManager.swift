@@ -12,6 +12,7 @@ class DataManager: ObservableObject {
     
     private var fileMonitor: DispatchSourceFileSystemObject?
     private var lastModifiedDate: Date?
+    private let marketAnalysisService = MarketAnalysisService()
     
     init() {
         self.appData = AppData.defaultData
@@ -355,5 +356,10 @@ class DataManager: ObservableObject {
         await MainActor.run {
             loadFromFile(url: url)
         }
+    }
+
+    // MARK: - Market Analysis (On-demand)
+    func analyzeMarket(for ticker: String) async -> MarketAnalysisResult {
+        await marketAnalysisService.analyze(ticker: ticker)
     }
 }

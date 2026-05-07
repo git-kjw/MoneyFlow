@@ -13,6 +13,12 @@ struct ContentView: View {
         case transactions = "거래내역"
         case accounts = "계좌관리"
         case statistics = "통계"
+        case market = "시장분석"
+        case settings = "설정"
+    }
+
+    private var macSidebarTabs: [Tab] {
+        [.dashboard, .transactions, .accounts, .statistics, .market]
     }
     
     var body: some View {
@@ -41,12 +47,18 @@ struct ContentView: View {
                     Label("통계", systemImage: "chart.bar")
                 }
                 .tag(Tab.statistics)
+
+            MarketAnalysisView()
+                .tabItem {
+                    Label("시장분석", systemImage: "chart.line.uptrend.xyaxis")
+                }
+                .tag(Tab.market)
             
             SettingsView(showingFileImporter: $showingFileImporter, showingFileExporter: $showingFileExporter)
                 .tabItem {
                     Label("설정", systemImage: "gear")
                 }
-                .tag(Tab.transactions)
+                .tag(Tab.settings)
         }
         .fileImporter(isPresented: $showingFileImporter, allowedContentTypes: [.json]) { result in
             handleFileImport(result)
@@ -62,7 +74,7 @@ struct ContentView: View {
         }
         #else
         NavigationSplitView {
-            List(Tab.allCases, id: \.self, selection: $selectedTab) { tab in
+            List(macSidebarTabs, id: \.self, selection: $selectedTab) { tab in
                 Label(tab.rawValue, systemImage: iconFor(tab: tab))
                     .tag(tab)
             }
@@ -105,6 +117,10 @@ struct ContentView: View {
                 AccountListView()
             case .statistics:
                 StatisticsView()
+            case .market:
+                MarketAnalysisView()
+            case .settings:
+                EmptyView()
             }
         }
         .fileImporter(isPresented: $showingFileImporter, allowedContentTypes: [.json]) { result in
@@ -128,6 +144,8 @@ struct ContentView: View {
         case .transactions: return "list.bullet.rectangle"
         case .accounts: return "banknote"
         case .statistics: return "chart.bar"
+        case .market: return "chart.line.uptrend.xyaxis"
+        case .settings: return "gear"
         }
     }
     

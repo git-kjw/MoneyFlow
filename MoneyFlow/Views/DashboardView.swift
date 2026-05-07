@@ -49,7 +49,26 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("대시보드")
+            #if os(macOS)
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        triggerRefresh()
+                    } label: {
+                        Label("새로고침", systemImage: "arrow.clockwise")
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(dataManager.isLoading)
+                }
+            }
+            #endif
             .background(Color.systemBackground)
+        }
+    }
+
+    private func triggerRefresh() {
+        Task {
+            await dataManager.refreshData()
         }
     }
     

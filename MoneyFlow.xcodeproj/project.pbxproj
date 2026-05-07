@@ -21,6 +21,9 @@
 		E51234560010 /* AccountEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550010 /* AccountEditView.swift */; };
 		E51234560011 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550011 /* Extensions.swift */; };
 		E51234560012 /* ColorExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550014 /* ColorExtensions.swift */; };
+		E51234560022 /* MarketModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550022 /* MarketModels.swift */; };
+		E51234560023 /* MarketAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550023 /* MarketAnalysisService.swift */; };
+		E51234560024 /* MarketAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550024 /* MarketAnalysisView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +44,9 @@
 		E51234550012 /* MoneyFlow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MoneyFlow.entitlements; sourceTree = "<group>"; };
 		E51234550013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E51234550014 /* ColorExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtensions.swift; sourceTree = "<group>"; };
+		E51234550022 /* MarketModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketModels.swift; sourceTree = "<group>"; };
+		E51234550023 /* MarketAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketAnalysisService.swift; sourceTree = "<group>"; };
+		E51234550024 /* MarketAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketAnalysisView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +97,7 @@
 				E51234550004 /* Models.swift */,
 				E51234550011 /* Extensions.swift */,
 				E51234550014 /* ColorExtensions.swift */,
+				E51234550022 /* MarketModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -105,6 +112,7 @@
 				E51234550020 /* QuickEntryView.swift */,
 				E51234550021 /* DashboardView.swift */,
 				E51234550010 /* AccountEditView.swift */,
+				E51234550024 /* MarketAnalysisView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -113,6 +121,7 @@
 			isa = PBXGroup;
 			children = (
 				E51234550005 /* DataManager.swift */,
+				E51234550023 /* MarketAnalysisService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -200,6 +209,9 @@
 				E51234560010 /* AccountEditView.swift in Sources */,
 				E51234560011 /* Extensions.swift in Sources */,
 				E51234560012 /* ColorExtensions.swift in Sources */,
+				E51234560022 /* MarketModels.swift in Sources */,
+				E51234560023 /* MarketAnalysisService.swift in Sources */,
+				E51234560024 /* MarketAnalysisView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

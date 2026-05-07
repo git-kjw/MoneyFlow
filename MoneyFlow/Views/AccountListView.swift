@@ -92,6 +92,17 @@ struct AccountListView: View {
                         Image(systemName: "plus")
                     }
                 }
+                #if os(macOS)
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        triggerRefresh()
+                    } label: {
+                        Label("새로고침", systemImage: "arrow.clockwise")
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(dataManager.isLoading)
+                }
+                #endif
             }
             .sheet(isPresented: $showingAddSheet) {
                 AccountEditView()
@@ -136,6 +147,12 @@ struct AccountListView: View {
                 Label("계좌 추가하기", systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private func triggerRefresh() {
+        Task {
+            await dataManager.refreshData()
         }
     }
 }

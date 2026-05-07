@@ -60,6 +60,17 @@ struct TransactionListView: View {
                         Image(systemName: filterOptions.selectedAccountIds.isEmpty && filterOptions.dateFilter == .all ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
                     }
                 }
+                #if os(macOS)
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        triggerRefresh()
+                    } label: {
+                        Label("새로고침", systemImage: "arrow.clockwise")
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(dataManager.isLoading)
+                }
+                #endif
             }
             .sheet(isPresented: $showingAddSheet) {
                 AddTransactionView()
@@ -142,6 +153,12 @@ struct TransactionListView: View {
             .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func triggerRefresh() {
+        Task {
+            await dataManager.refreshData()
+        }
     }
 }
 

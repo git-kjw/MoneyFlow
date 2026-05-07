@@ -54,6 +54,25 @@ struct StatisticsView: View {
                 }
             }
             .navigationTitle("통계")
+            #if os(macOS)
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        triggerRefresh()
+                    } label: {
+                        Label("새로고침", systemImage: "arrow.clockwise")
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(dataManager.isLoading)
+                }
+            }
+            #endif
+        }
+    }
+
+    private func triggerRefresh() {
+        Task {
+            await dataManager.refreshData()
         }
     }
     
