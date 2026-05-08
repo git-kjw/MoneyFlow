@@ -29,6 +29,15 @@ macOS와 iOS에서 사용 가능한 Universal 계좌 입출금 내역 관리 앱
 - 계좌별 현황
 - 차트 시각화
 
+### 시장분석
+- 종목 티커 기반 시장 데이터 조회
+- 애널리스트 추천 추이 차트(강력매수/매수/보유/매도/강력매도)
+- 내부자 거래 리스트 제공:
+  - `transactionCode`가 `P`(매수), `S`(매도)인 항목만 표시
+  - 최신 거래 10건을 날짜/매수·매도/change/transactionPrice/name으로 표시
+- 티커 입력 후 **분석 버튼** 또는 키보드 **엔터(맥/iOS)** 로 분석 실행
+- 내부자 이름(`name`) 탭/클릭 시 클립보드 복사
+
 ## 🔄 iCloud Drive 동기화 (무료 계정 지원!)
 
 **무료 Apple 계정**으로도 맥북과 아이폰 간 데이터 동기화가 가능합니다.
@@ -94,6 +103,7 @@ MoneyFlow/
 ├── ContentView.swift       # 메인 뷰 + 파일 관리
 ├── Models/
 │   ├── Models.swift        # 데이터 모델 (Account, Transaction)
+│   ├── MarketModels.swift  # 시장분석 데이터 모델
 │   ├── Extensions.swift    # 유틸리티 확장
 │   └── ColorExtensions.swift
 ├── Views/
@@ -101,9 +111,11 @@ MoneyFlow/
 │   ├── AddTransactionView.swift   # 거래 추가/수정
 │   ├── AccountListView.swift      # 계좌 목록
 │   ├── AccountEditView.swift      # 계좌 추가/수정
-│   └── StatisticsView.swift       # 통계
+│   ├── StatisticsView.swift       # 통계
+│   └── MarketAnalysisView.swift   # 시장분석
 └── Services/
-    └── DataManager.swift   # 데이터 관리 + 파일 I/O
+    ├── DataManager.swift           # 데이터 관리 + 파일 I/O
+    └── MarketAnalysisService.swift # 시장분석 API 연동
 ```
 
 ## 라이선스

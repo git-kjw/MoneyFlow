@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E51234560021 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550021 /* DashboardView.swift */; };
-		E51234560020 /* QuickEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550020 /* QuickEntryView.swift */; };
 		E51234560001 /* MoneyFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550001 /* MoneyFlowApp.swift */; };
 		E51234560002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550002 /* ContentView.swift */; };
 		E51234560003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E51234550003 /* Assets.xcassets */; };
@@ -21,14 +19,14 @@
 		E51234560010 /* AccountEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550010 /* AccountEditView.swift */; };
 		E51234560011 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550011 /* Extensions.swift */; };
 		E51234560012 /* ColorExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550014 /* ColorExtensions.swift */; };
+		E51234560020 /* QuickEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550020 /* QuickEntryView.swift */; };
+		E51234560021 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550021 /* DashboardView.swift */; };
 		E51234560022 /* MarketModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550022 /* MarketModels.swift */; };
 		E51234560023 /* MarketAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550023 /* MarketAnalysisService.swift */; };
 		E51234560024 /* MarketAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51234550024 /* MarketAnalysisView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		E51234550021 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
-		E51234550020 /* QuickEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickEntryView.swift; sourceTree = "<group>"; };
 		E51234550000 /* MoneyFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoneyFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E51234550001 /* MoneyFlowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyFlowApp.swift; sourceTree = "<group>"; };
 		E51234550002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -44,6 +42,8 @@
 		E51234550012 /* MoneyFlow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MoneyFlow.entitlements; sourceTree = "<group>"; };
 		E51234550013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E51234550014 /* ColorExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtensions.swift; sourceTree = "<group>"; };
+		E51234550020 /* QuickEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickEntryView.swift; sourceTree = "<group>"; };
+		E51234550021 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		E51234550022 /* MarketModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketModels.swift; sourceTree = "<group>"; };
 		E51234550023 /* MarketAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketAnalysisService.swift; sourceTree = "<group>"; };
 		E51234550024 /* MarketAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketAnalysisView.swift; sourceTree = "<group>"; };
@@ -136,6 +136,7 @@
 				E512345S0001 /* Sources */,
 				E512345F0001 /* Frameworks */,
 				E512345R0001 /* Resources */,
+				2730C59B2FAE668100C6987F /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -190,6 +191,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		2730C59B2FAE668100C6987F /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\ncp -R \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app\" ~/Desktop/\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		E512345S0001 /* Sources */ = {
@@ -343,6 +365,7 @@
 				DEVELOPMENT_TEAM = TQXTN3ZK8R;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MoneyFlow/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MoneyFlow;
@@ -383,6 +406,7 @@
 				DEVELOPMENT_TEAM = TQXTN3ZK8R;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MoneyFlow/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MoneyFlow;

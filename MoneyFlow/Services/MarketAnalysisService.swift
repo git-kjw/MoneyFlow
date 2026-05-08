@@ -20,29 +20,28 @@ final class MarketAnalysisService {
     func analyze(ticker: String) async -> MarketAnalysisResult {
         let normalizedTicker = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !normalizedTicker.isEmpty else {
-            return MarketAnalysisResult(ticker: "-", analyzedAt: Date(), recommendations: [])
+            return MarketAnalysisResult(ticker: "-", analyzedAt: Date(), recommendations: [], insiderTransactions: [])
         }
 
-        guard var components = URLComponents(string: "https://finnhub.io/api/v1/stock/recommendation") else {
-            return MarketAnalysisResult(ticker: normalizedTicker, analyzedAt: Date(), recommendations: [])
-        }
-        components.queryItems = [
-            URLQueryItem(name: "symbol", value: normalizedTicker),
-            URLQueryItem(name: "token", value: finnhubAPIToken)
-        ]
+        async let recommendations = fetchRecommendations(for: normalizedTicker)
+        async let insiderTransactions = fetchInsiderTransactions(for: normalizedTicker)
 
-        guard let url = components.url else {
-            return MarketAnalysisResult(ticker: normalizedTicker, analyzedAt: Date(), recommendations: [])
-        }
+        return MarketAnalysisResult(
+            ticker: normalizedTicker,
+            analyzedAt: Date(),
+            recommendations: await recommendations,
+            insiderTransactions: await insiderTransactions
+        )
+    }
 
+    private func fetchRecommendations(for ticker: String) async -> [MarketRecommendation] {
         do {
-            let (data, response) = try await session.data(from: url)
-            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                return MarketAnalysisResult(ticker: normalizedTicker, analyzedAt: Date(), recommendations: [])
+            guard let data = try await request(path: "stock/recommendation", ticker: ticker) else {
+                return []
             }
 
             let decoded = try JSONDecoder().decode([FinnhubRecommendationResponse].self, from: data)
-            let recentRecommendations = decoded
+            return decoded
                 .sorted { $0.period > $1.period }
                 .prefix(5)
                 .map {
@@ -56,15 +55,62 @@ final class MarketAnalysisService {
                         strongSell: $0.strongSell
                     )
                 }
-
-            return MarketAnalysisResult(
-                ticker: normalizedTicker,
-                analyzedAt: Date(),
-                recommendations: Array(recentRecommendations)
-            )
         } catch {
-            return MarketAnalysisResult(ticker: normalizedTicker, analyzedAt: Date(), recommendations: [])
+            return []
         }
+    }
+
+    private func fetchInsiderTransactions(for ticker: String) async -> [InsiderTransaction] {
+        do {
+            guard let data = try await request(path: "stock/insider-transactions", ticker: ticker) else {
+                return []
+            }
+
+            let decoded = try JSONDecoder().decode(FinnhubInsiderTransactionsResponse.self, from: data)
+            return decoded.data
+                .filter {
+                    let code = $0.transactionCode.uppercased()
+                    return code == "P" || code == "S"
+                }
+                .sorted { lhs, rhs in
+                    let leftDate = Self.dateFormatter.date(from: lhs.transactionDate) ?? .distantPast
+                    let rightDate = Self.dateFormatter.date(from: rhs.transactionDate) ?? .distantPast
+                    return leftDate > rightDate
+                }
+                .prefix(10)
+                .map {
+                    InsiderTransaction(
+                        filingID: $0.id,
+                        name: $0.name,
+                        transactionDate: $0.transactionDate,
+                        transactionCode: $0.transactionCode.uppercased(),
+                        change: $0.change,
+                        transactionPrice: $0.transactionPrice
+                    )
+                }
+        } catch {
+            return []
+        }
+    }
+
+    private func request(path: String, ticker: String) async throws -> Data? {
+        guard var components = URLComponents(string: "https://finnhub.io/api/v1/\(path)") else {
+            return nil
+        }
+        components.queryItems = [
+            URLQueryItem(name: "symbol", value: ticker),
+            URLQueryItem(name: "token", value: finnhubAPIToken)
+        ]
+
+        guard let url = components.url else {
+            return nil
+        }
+
+        let (data, response) = try await session.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            return nil
+        }
+        return data
     }
 }
 
@@ -76,4 +122,26 @@ private struct FinnhubRecommendationResponse: Decodable {
     let strongBuy: Int
     let strongSell: Int
     let symbol: String
+}
+
+private struct FinnhubInsiderTransactionsResponse: Decodable {
+    let data: [FinnhubInsiderTransaction]
+}
+
+private struct FinnhubInsiderTransaction: Decodable {
+    let change: Int
+    let id: String
+    let name: String
+    let transactionCode: String
+    let transactionDate: String
+    let transactionPrice: Double
+}
+
+extension MarketAnalysisService {
+    fileprivate static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }

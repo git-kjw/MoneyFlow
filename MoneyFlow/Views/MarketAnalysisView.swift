@@ -1,5 +1,10 @@
 import SwiftUI
 import Charts
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 struct MarketAnalysisView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -60,6 +65,7 @@ struct MarketAnalysisView: View {
                     summarySection
                     trendChartSection
                     latestSummarySection
+                    insiderTransactionsSection
                 }
                 .padding()
             }
@@ -85,6 +91,10 @@ struct MarketAnalysisView: View {
                         .textInputAutocapitalization(.characters)
                         #endif
                         .autocorrectionDisabled()
+                        .submitLabel(.search)
+                        .onSubmit {
+                            analyzeTicker()
+                        }
                         .textFieldStyle(.roundedBorder)
 
                     Button {
@@ -290,6 +300,61 @@ struct MarketAnalysisView: View {
         }
     }
 
+    @ViewBuilder
+    private var insiderTransactionsSection: some View {
+        if let result {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("내부자 거래 (최신 10건)")
+                    .font(.headline)
+
+                if result.insiderTransactions.isEmpty {
+                    Text("내부자 매수/매도 데이터가 없습니다.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(result.insiderTransactions) { transaction in
+                        HStack(alignment: .top, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Button {
+                                    copyToClipboard(transaction.name)
+                                } label: {
+                                    Text(transaction.name)
+                                        .font(.caption)
+                                        .foregroundStyle(.blue)
+                                }
+                                .buttonStyle(.plain)
+                                Text(transaction.transactionDate)
+                                    .font(.subheadline)
+                                Text(transaction.sideLabel)
+                                    .font(.caption)
+                                    .foregroundStyle(transaction.transactionCode == "P" ? .green : .red)
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("변동 \(formattedChange(transaction.change))")
+                                    .font(.subheadline)
+                                    .foregroundStyle(transaction.change >= 0 ? .green : .red)
+                                Text("거래가 \(formattedPrice(transaction.transactionPrice))")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+
+                        if transaction.id != result.insiderTransactions.last?.id {
+                            Divider()
+                        }
+                    }
+                }
+            }
+            .padding()
+            .background(Color.secondarySystemBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
     private func countItem(title: String, value: Int, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
@@ -316,12 +381,32 @@ struct MarketAnalysisView: View {
             let analyzed = await dataManager.analyzeMarket(for: ticker)
             await MainActor.run {
                 result = analyzed
-                if analyzed.recommendations.isEmpty {
-                    errorMessage = "추천 데이터를 불러오지 못했습니다."
+                if analyzed.recommendations.isEmpty && analyzed.insiderTransactions.isEmpty {
+                    errorMessage = "분석 데이터를 불러오지 못했습니다."
                 }
                 isLoading = false
             }
         }
+    }
+
+    private func formattedChange(_ value: Int) -> String {
+        if value > 0 {
+            return "+\(value.formatted())"
+        }
+        return value.formatted()
+    }
+
+    private func formattedPrice(_ price: Double) -> String {
+        price.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
+    private func copyToClipboard(_ text: String) {
+        #if os(iOS)
+        UIPasteboard.general.string = text
+        #elseif os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #endif
     }
 
     private func periodDate(from period: String) -> Date? {
