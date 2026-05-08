@@ -2,8 +2,11 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var dataManager: DataManager
+    @Binding var showingFileImporter: Bool
+    @Binding var showingFileExporter: Bool
     @State private var selectedYear: Int = Calendar.current.component(.year, from: Date())
     @State private var showAllTime: Bool = true
+    @State private var showingSettingsSheet = false
     
     private var availableYears: [Int] {
         let years = Set(dataManager.appData.transactions.map { $0.date.year })
@@ -49,6 +52,22 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("대시보드")
+            #if os(iOS)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingSettingsSheet = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .accessibilityLabel("설정")
+                }
+            }
+            .sheet(isPresented: $showingSettingsSheet) {
+                SettingsView(showingFileImporter: $showingFileImporter, showingFileExporter: $showingFileExporter)
+                    .environmentObject(dataManager)
+            }
+            #endif
             #if os(macOS)
             .toolbar {
                 ToolbarItem(placement: .automatic) {
@@ -324,6 +343,6 @@ extension DashboardView {
 }
 
 #Preview {
-    DashboardView()
+    DashboardView(showingFileImporter: .constant(false), showingFileExporter: .constant(false))
         .environmentObject(DataManager())
 }

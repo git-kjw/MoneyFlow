@@ -24,7 +24,7 @@ struct ContentView: View {
     var body: some View {
         #if os(iOS)
         TabView(selection: $selectedTab) {
-            DashboardView()
+            DashboardView(showingFileImporter: $showingFileImporter, showingFileExporter: $showingFileExporter)
                 .tabItem {
                     Label("대시보드", systemImage: "chart.pie")
                 }
@@ -53,12 +53,6 @@ struct ContentView: View {
                     Label("시장분석", systemImage: "chart.line.uptrend.xyaxis")
                 }
                 .tag(Tab.market)
-            
-            SettingsView(showingFileImporter: $showingFileImporter, showingFileExporter: $showingFileExporter)
-                .tabItem {
-                    Label("설정", systemImage: "gear")
-                }
-                .tag(Tab.settings)
         }
         .fileImporter(isPresented: $showingFileImporter, allowedContentTypes: [.json]) { result in
             handleFileImport(result)
@@ -110,7 +104,7 @@ struct ContentView: View {
         } detail: {
             switch selectedTab {
             case .dashboard:
-                DashboardView()
+                DashboardView(showingFileImporter: $showingFileImporter, showingFileExporter: $showingFileExporter)
             case .transactions:
                 TransactionListView()
             case .accounts:
