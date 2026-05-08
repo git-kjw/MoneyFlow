@@ -4,7 +4,7 @@ import Charts
 struct MarketAnalysisView: View {
     @EnvironmentObject var dataManager: DataManager
 
-    @State private var tickerInput: String = "SPY"
+    @State private var tickerInput: String = ""
     @State private var result: MarketAnalysisResult?
     @State private var errorMessage: String?
     @State private var isLoading = false
@@ -31,7 +31,7 @@ struct MarketAnalysisView: View {
 
     private var quickTickers: [String] {
         if recentTickers.isEmpty {
-            return ["SPY", "QQQ", "AAPL"]
+            return ["APPL", "NOW", "MSFT", "TSLA", "AMZN"]
         }
         return recentTickers
     }
@@ -80,7 +80,7 @@ struct MarketAnalysisView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack {
-                    TextField("예: AAPL, QQQ, SPY", text: $tickerInput)
+                    TextField("", text: $tickerInput)
                         #if os(iOS)
                         .textInputAutocapitalization(.characters)
                         #endif
