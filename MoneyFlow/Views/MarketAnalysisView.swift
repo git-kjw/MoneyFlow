@@ -1,9 +1,5 @@
 import SwiftUI
-#if os(macOS)
-import AppKit
-#elseif os(iOS)
-import UIKit
-#endif
+import Charts
 
 struct MarketAnalysisView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -12,8 +8,49 @@ struct MarketAnalysisView: View {
     @State private var result: MarketAnalysisResult?
     @State private var errorMessage: String?
     @State private var isLoading = false
-    @State private var showDetails = true
-    @State private var lastAnalyzedTicker: String?
+    @State private var recentTickers: [String] = []
+
+    private let recommendationColumns: [GridItem] = [
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
+    private let recentTickersKey = "MarketAnalysisRecentTickers"
+
+    private var displayRecommendations: [MarketRecommendation] {
+        guard let result else { return [] }
+        return result.recommendations.sorted { left, right in
+            let leftDate = periodDate(from: left.period) ?? .distantPast
+            let rightDate = periodDate(from: right.period) ?? .distantPast
+            return leftDate < rightDate
+        }
+    }
+
+    private var latestRecommendation: MarketRecommendation? {
+        displayRecommendations.last
+    }
+
+    private var quickTickers: [String] {
+        if recentTickers.isEmpty {
+            return ["SPY", "QQQ", "AAPL"]
+        }
+        return recentTickers
+    }
+
+    private var chartPoints: [RecommendationChartPoint] {
+        Array(displayRecommendations.enumerated()).flatMap { index, recommendation -> [RecommendationChartPoint] in
+            return [
+                RecommendationChartPoint(period: recommendation.period, xIndex: index, series: .strongBuy, value: recommendation.strongBuy),
+                RecommendationChartPoint(period: recommendation.period, xIndex: index, series: .buy, value: recommendation.buy),
+                RecommendationChartPoint(period: recommendation.period, xIndex: index, series: .hold, value: recommendation.hold),
+                RecommendationChartPoint(period: recommendation.period, xIndex: index, series: .sell, value: recommendation.sell),
+                RecommendationChartPoint(period: recommendation.period, xIndex: index, series: .strongSell, value: recommendation.strongSell)
+            ]
+        }
+    }
+
+    private func points(for series: RecommendationSeries) -> [RecommendationChartPoint] {
+        chartPoints.filter { $0.series == series }
+    }
 
     var body: some View {
         NavigationStack {
@@ -21,26 +58,15 @@ struct MarketAnalysisView: View {
                 VStack(spacing: 16) {
                     inputSection
                     summarySection
-                    detailsSection
-                    warningSection
-                    apiIssueSection
+                    trendChartSection
+                    latestSummarySection
                 }
                 .padding()
             }
             .navigationTitle("시장분석")
-            #if os(macOS)
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        runLastAnalysis()
-                    } label: {
-                        Label("새로고침", systemImage: "arrow.clockwise")
-                    }
-                    .keyboardShortcut("r", modifiers: [.command])
-                    .disabled(isLoading)
-                }
+            .onAppear {
+                loadRecentTickers()
             }
-            #endif
         }
     }
 
@@ -51,8 +77,8 @@ struct MarketAnalysisView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("티커")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 HStack {
                     TextField("예: AAPL, QQQ, SPY", text: $tickerInput)
                         #if os(iOS)
@@ -76,14 +102,16 @@ struct MarketAnalysisView: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                ForEach(["SPY", "QQQ", "AAPL"], id: \.self) { ticker in
-                    Button(ticker) {
-                        tickerInput = ticker
-                        analyzeTicker()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(quickTickers, id: \.self) { ticker in
+                        Button(ticker) {
+                            tickerInput = ticker
+                            analyzeTicker()
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(isLoading)
                     }
-                    .buttonStyle(.bordered)
-                    .disabled(isLoading)
                 }
             }
         }
@@ -105,46 +133,17 @@ struct MarketAnalysisView: View {
         }
 
         if let result {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(result.ticker)
-                            .font(.headline)
-                        Text(result.analyzedAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Text(result.signal.rawValue)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(signalColor(result.signal))
-                }
-
-                HStack(spacing: 16) {
-                    statItem(title: "총점", value: "\(result.totalScore)점")
-                    statItem(title: "신뢰도", value: result.confidence.rawValue)
-                    statItem(title: "완성도", value: "\(result.dataCompleteness)%")
-                }
-
-                if let overrideReason = result.overrideReason {
-                    Text(overrideReason)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-
-                if !result.adjustments.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("보정 점수")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        ForEach(result.adjustments, id: \.self) { adjustment in
-                            Text("• \(adjustment)")
-                                .font(.caption)
-                        }
-                    }
-                }
+            VStack(alignment: .leading, spacing: 6) {
+                Text(result.ticker)
+                    .font(.headline)
+                Text(result.analyzedAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("최신 5개 기간 추이 표시")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .background(Color.secondarySystemBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -152,36 +151,137 @@ struct MarketAnalysisView: View {
     }
 
     @ViewBuilder
-    private var detailsSection: some View {
+    private var trendChartSection: some View {
         if let result {
-            VStack(alignment: .leading, spacing: 12) {
-                Toggle("상세 점수 보기", isOn: $showDetails)
-                    .toggleStyle(.switch)
+            if result.recommendations.isEmpty {
+                Text("추천 데이터가 없습니다.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color.secondarySystemBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("추천 추이")
+                        .font(.headline)
 
-                if showDetails {
-                    ForEach(result.indicatorScores) { score in
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(score.title)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Text(score.valueText)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                if let note = score.note {
-                                    Text(note)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                    Chart {
+                        ForEach(points(for: .strongBuy)) { point in
+                            LineMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .interpolationMethod(.linear)
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.strongBuy.title))
+                            PointMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.strongBuy.title))
+                        }
+                        ForEach(points(for: .buy)) { point in
+                            LineMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .interpolationMethod(.linear)
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.buy.title))
+                            PointMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.buy.title))
+                        }
+                        ForEach(points(for: .hold)) { point in
+                            LineMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .interpolationMethod(.linear)
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.hold.title))
+                            PointMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.hold.title))
+                        }
+                        ForEach(points(for: .sell)) { point in
+                            LineMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .interpolationMethod(.linear)
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.sell.title))
+                            PointMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.sell.title))
+                        }
+                        ForEach(points(for: .strongSell)) { point in
+                            LineMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .interpolationMethod(.linear)
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.strongSell.title))
+                            PointMark(
+                                x: .value("기간", point.xIndex),
+                                y: .value("수치", point.value)
+                            )
+                            .foregroundStyle(by: .value("의견", RecommendationSeries.strongSell.title))
+                        }
+                    }
+                    .chartForegroundStyleScale([
+                        RecommendationSeries.strongBuy.title: RecommendationSeries.strongBuy.color,
+                        RecommendationSeries.buy.title: RecommendationSeries.buy.color,
+                        RecommendationSeries.hold.title: RecommendationSeries.hold.color,
+                        RecommendationSeries.sell.title: RecommendationSeries.sell.color,
+                        RecommendationSeries.strongSell.title: RecommendationSeries.strongSell.color
+                    ])
+                    .chartXAxis {
+                        AxisMarks(values: Array(displayRecommendations.indices)) { value in
+                            AxisValueLabel {
+                                if let index = value.as(Int.self), displayRecommendations.indices.contains(index) {
+                                    Text(displayRecommendations[index].period)
                                 }
                             }
-                            Spacer()
-                            Text("\(score.score)")
-                                .font(.headline)
-                                .foregroundStyle(scoreColor(score.score))
+                            AxisTick()
+                            AxisGridLine()
                         }
-                        .padding(.vertical, 4)
-                        Divider()
                     }
+                    .chartLegend(.hidden)
+                    .frame(height: 240)
+
+                    legendSection
+                }
+                .padding()
+                .background(Color.secondarySystemBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var latestSummarySection: some View {
+        if let latestRecommendation {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("최신 값 요약")
+                        .font(.headline)
+                    Spacer()
+                    Text(latestRecommendation.period)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                LazyVGrid(columns: recommendationColumns, alignment: .leading, spacing: 8) {
+                    countItem(title: "강력매수", value: latestRecommendation.strongBuy, color: .green)
+                    countItem(title: "매수", value: latestRecommendation.buy, color: .mint)
+                    countItem(title: "보유", value: latestRecommendation.hold, color: .orange)
+                    countItem(title: "매도", value: latestRecommendation.sell, color: .red)
+                    countItem(title: "강력매도", value: latestRecommendation.strongSell, color: .pink)
                 }
             }
             .padding()
@@ -190,65 +290,14 @@ struct MarketAnalysisView: View {
         }
     }
 
-    @ViewBuilder
-    private var apiIssueSection: some View {
-        if let result, !result.apiIssues.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("API 호출 오류 상세")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                ForEach(result.apiIssues) { issue in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(issue.endpoint)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                        Text("사유: \(issue.reason)")
-                            .font(.caption)
-                        Text(issue.url)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                            .lineLimit(3)
-                        Button("URL 복사") {
-                            copyToClipboard(issue.url)
-                        }
-                        .font(.caption)
-                        .buttonStyle(.bordered)
-                    }
-                    .padding(10)
-                    .background(Color.secondary.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-            }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.yellow.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-
-    @ViewBuilder
-    private var warningSection: some View {
-        if let result, !result.warnings.isEmpty {
-            let visibleWarnings = Array(result.warnings.prefix(3))
-            VStack(alignment: .leading, spacing: 8) {
-                Text("데이터 경고")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                ForEach(visibleWarnings, id: \.self) { warning in
-                    Text("• \(warning)")
-                        .font(.caption)
-                }
-                if result.warnings.count > visibleWarnings.count {
-                    Text("외 \(result.warnings.count - visibleWarnings.count)개")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.orange.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+    private func countItem(title: String, value: Int, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("\(value)")
+                .font(.headline)
+                .foregroundStyle(color)
         }
     }
 
@@ -259,6 +308,7 @@ struct MarketAnalysisView: View {
             return
         }
 
+        addRecentTicker(ticker)
         isLoading = true
         errorMessage = nil
 
@@ -266,58 +316,94 @@ struct MarketAnalysisView: View {
             let analyzed = await dataManager.analyzeMarket(for: ticker)
             await MainActor.run {
                 result = analyzed
-                lastAnalyzedTicker = ticker
+                if analyzed.recommendations.isEmpty {
+                    errorMessage = "추천 데이터를 불러오지 못했습니다."
+                }
                 isLoading = false
             }
         }
     }
 
-    private func runLastAnalysis() {
-        if let lastAnalyzedTicker {
-            tickerInput = lastAnalyzedTicker
+    private func periodDate(from period: String) -> Date? {
+        Self.periodFormatter.date(from: period)
+    }
+
+    private func loadRecentTickers() {
+        guard let saved = UserDefaults.standard.array(forKey: recentTickersKey) as? [String] else {
+            recentTickers = []
+            return
         }
-        analyzeTicker()
+        recentTickers = Array(saved.filter { !$0.isEmpty }.prefix(10))
     }
 
-    private func statItem(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.subheadline)
-                .fontWeight(.semibold)
+    private func addRecentTicker(_ ticker: String) {
+        var updated = recentTickers.filter { $0 != ticker }
+        updated.insert(ticker, at: 0)
+        recentTickers = Array(updated.prefix(10))
+        UserDefaults.standard.set(recentTickers, forKey: recentTickersKey)
+    }
+
+    private var legendSection: some View {
+        HStack(spacing: 12) {
+            ForEach(RecommendationSeries.allCases, id: \.self) { series in
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(series.color)
+                        .frame(width: 8, height: 8)
+                    Text(series.title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 
-    private func signalColor(_ signal: MarketSignal) -> Color {
-        switch signal {
-        case .buy:
-            return .green
-        case .stay:
-            return .orange
-        case .sell:
-            return .red
-        }
-    }
-
-    private func scoreColor(_ score: Int) -> Color {
-        if score > 0 { return .green }
-        if score < 0 { return .red }
-        return .secondary
-    }
-
-    private func copyToClipboard(_ text: String) {
-        #if os(macOS)
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-        #elseif os(iOS)
-        UIPasteboard.general.string = text
-        #endif
-    }
+    private static let periodFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 
 #Preview {
     MarketAnalysisView()
         .environmentObject(DataManager())
+}
+
+private struct RecommendationChartPoint: Identifiable {
+    let period: String
+    let xIndex: Int
+    let series: RecommendationSeries
+    let value: Int
+
+    var id: String { "\(series.rawValue)-\(period)" }
+}
+
+private enum RecommendationSeries: String, CaseIterable {
+    case strongBuy
+    case buy
+    case hold
+    case sell
+    case strongSell
+
+    var title: String {
+        switch self {
+        case .strongBuy: return "강력매수"
+        case .buy: return "매수"
+        case .hold: return "유지"
+        case .sell: return "매도"
+        case .strongSell: return "강력매도"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .strongBuy: return .green
+        case .buy: return .mint
+        case .hold: return .orange
+        case .sell: return .red
+        case .strongSell: return .pink
+        }
+    }
 }
